@@ -1,0 +1,13 @@
+{
+  "name": "soomoon-report-api",
+  "version": "1.0.0",
+  "description": "Report API",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
