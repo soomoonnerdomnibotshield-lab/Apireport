@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>ApiReport</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body {
+    margin: 0;
+    font-family: monospace;
+    background: #0b0b0b;
+    color: #eaeaea;
+    padding: 20px;
+  }
+  .card {
+    max-width: 420px;
+    margin: auto;
+    background: #111;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 0 20px #000;
+  }
+  img {
+    width: 100%;
+    border-radius: 10px;
+    margin-top: 12px;
+  }
+  pre {
+    background: #000;
+    padding: 14px;
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+/* ===== CONFIG ===== */
+const IMAGE_URL = "https://files.catbox.moe/7yw4v1.jpg"; // sua imagem
+const DAILY_LIMIT = 10; // limite por key por dia
+const CREATOR_NAME = "SoomoonNerd";
+const CREATOR_NUMBER = "+55XXXXXXXXX";
+/* ================== */
+
+const params = new URLSearchParams(window.location.search);
+const number = params.get("number");
+const jsonOnly = params.get("json") === "1";
+const apiKey = params.get("key");
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function detectCountry(num) {
+  if (num.startsWith("55")) return "Brazil";
+  if (num.startsWith("1")) return "USA/Canada";
+  if (num.startsWith("44")) return "United Kingdom";
+  if (num.startsWith("62")) return "Indonesia";
+  return "Unknown";
+}
+
+function severityByReports(r) {
+  if (r <= 6) return "Low";
+  if (r <= 12) return "Medium";
+  return "High";
+}
+
+/* ===== KEY LIMIT ===== */
+function checkLimit(key) {
+  const storageKey = "api_limit_" + key;
+  const data = JSON.parse(localStorage.getItem(storageKey) || "{}");
+
+  if (data.date !== today()) {
+    data.date = today();
+    data.count = 0;
+  }
+
+  if (data.count >= DAILY_LIMIT) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  data.count++;
+  localStorage.setItem(storageKey, JSON.stringify(data));
+
+  return {
+    allowed: true,
+    remaining: DAILY_LIMIT - data.count
+  };
+}
+/* ===================== */
+
+if (!apiKey) {
+  document.body.innerHTML =
+    `<pre>{ "error": "x-api-key missing" }</pre>`;
+  throw "";
+}
+
+const limit = checkLimit(apiKey);
+
+if (!limit.allowed) {
+  document.body.innerHTML =
+    `<pre>{
+  "error": "daily limit exceeded",
+  "limit": ${DAILY_LIMIT}
+}</pre>`;
+  throw "";
+}
+
+if (!number) {
+  document.body.innerHTML =
+    `<pre>{ "error": "number not provided" }</pre>`;
+  throw "";
+}
+
+const reports = Math.floor(Math.random() * 16) + 3; // 3 a 18
+const severity = severityByReports(reports);
+
+const response = {
+  target: "+" + number,
+  reports: reports,
+  severity: severity,
+  image: IMAGE_URL,
+  remaining: limit.remaining,
+  creator: {
+    name: CREATOR_NAME,
+    number: CREATOR_NUMBER,
+    country: detectCountry(number)
+  }
+};
+
+if (jsonOnly) {
+  document.body.innerHTML =
+    "<pre>" + JSON.stringify(response, null, 2) + "</pre>";
+} else {
+  document.getElementById("app").innerHTML = `
+    <div class="card">
+      <h2>REPORT RESULT</h2>
+      <p><b>Target:</b> +${number}</p>
+      <p><b>Reports:</b> ${reports}</p>
+      <p><b>Severity:</b> ${severity}</p>
+      <p><b>Remaining today:</b> ${limit.remaining}</p>
+      <img src="${IMAGE_URL}">
+      <pre>${JSON.stringify(response, null, 2)}</pre>
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>
